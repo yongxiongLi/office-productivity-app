@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">办公增效</string>
+    <string name="dashboard_title">办公增效</string>
+    <string name="dashboard_subtitle">把任务、会议和工作总结放在一起。</string>
+    <string name="feature_tasks_title">任务与提醒</string>
+    <string name="feature_tasks_description">记录待办、截止时间和优先级。</string>
+    <string name="feature_meetings_title">会议记录</string>
+    <string name="feature_meetings_description">整理会议内容，并把行动项转成任务。</string>
+    <string name="feature_reports_title">日报与周报</string>
+    <string name="feature_reports_description">汇总已完成事项，快速整理工作报告。</string>
+</resources>
