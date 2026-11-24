@@ -1,7 +1,7 @@
 <resources>
-    <string name="app_name">办公增效</string>
-    <string name="dashboard_title">办公增效</string>
-    <string name="dashboard_subtitle">把任务、会议和工作总结放在一起。</string>
+    <string name="app_name">Flow办公</string>
+    <string name="dashboard_title">Flow办公</string>
+    <string name="dashboard_subtitle">让任务、会议和工作总结流畅衔接。</string>
     <string name="feature_tasks_title">任务与提醒</string>
     <string name="feature_tasks_description">记录待办、截止时间和优先级。</string>
     <string name="feature_meetings_title">会议记录</string>
