@@ -8,4 +8,6 @@
     <string name="feature_meetings_description">整理会议内容，并把行动项转成任务。</string>
     <string name="feature_reports_title">日报与周报</string>
     <string name="feature_reports_description">汇总已完成事项，快速整理工作报告。</string>
+    <string name="task_reminder_title">任务提醒</string>
+    <string name="task_reminder_channel">任务截止时间</string>
 </resources>

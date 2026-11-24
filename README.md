@@ -4,10 +4,10 @@ An Android productivity app for meeting notes, tasks and reminders, and daily/we
 
 ## Project skeleton
 
-- Kotlin + Jetpack Compose UI
-- Material 3 starter dashboard
+- Kotlin + Jetpack Compose and Material 3
+- Task screen with local Room persistence
+- WorkManager-based task deadline notifications
 - Android app module with Java 17, `minSdk 26`, and `compileSdk 35`
-- Feature placeholders for tasks/reminders, meeting notes, and reports
 
 ## Open and run
 
@@ -17,9 +17,12 @@ An Android productivity app for meeting notes, tasks and reminders, and daily/we
 
 If you want a command-line Gradle wrapper, generate it from the project root using Gradle 8.9: `gradle wrapper --gradle-version 8.9`.
 
+## Tasks and reminders
+
+Tasks are stored locally in Room. Create a task and optionally choose a date and time to schedule a notification. You can mark a task complete or delete it; either action cancels its pending reminder. Android 13 and later require notification permission. WorkManager schedules reminders as deferrable background work, so delivery is not guaranteed at the exact minute.
+
 ## Next steps
 
-1. Add ViewModels and navigation for the three feature areas.
-2. Add Room entities/DAOs for tasks, meetings, and reports.
-3. Schedule task reminders with WorkManager and request notification permission where required.
-4. Add unit and UI tests before introducing sync or account features.
+1. Add edit-task support and tests for persistence and scheduling.
+2. Add meeting notes and reports, then link meeting action items to tasks.
+3. Consider backup or account sync after the local-first workflow is stable.
