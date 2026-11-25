@@ -14,4 +14,5 @@ data class TaskEntity(
     val assignee: String = "",
     val meetingId: Long? = null,
     val completedAtMillis: Long? = null,
+    val reminderAtMillis: Long? = null,
 )

@@ -11,4 +11,5 @@ data class MeetingEntity(
     val participants: String,
     val notes: String,
     val createdAtMillis: Long = System.currentTimeMillis(),
+    val reminderAtMillis: Long? = null,
 )
