@@ -13,6 +13,9 @@ interface MeetingDao {
     @Insert
     suspend fun insert(meeting: MeetingEntity): Long
 
+    @Query("UPDATE meetings SET title = :title, meetingAtMillis = :meetingAtMillis, reminderAtMillis = :reminderAtMillis, participants = :participants, notes = :notes WHERE id = :meetingId")
+    suspend fun updateDetails(meetingId: Long, title: String, meetingAtMillis: Long, reminderAtMillis: Long?, participants: String, notes: String)
+
     @Query("DELETE FROM meetings WHERE id = :meetingId")
     suspend fun delete(meetingId: Long)
 }

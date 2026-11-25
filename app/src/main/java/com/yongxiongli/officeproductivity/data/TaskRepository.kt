@@ -1,7 +1,6 @@
 package com.yongxiongli.officeproductivity.data
 
 import android.content.Context
-import androidx.work.WorkManager
 import kotlinx.coroutines.flow.Flow
 
 class TaskRepository(
@@ -14,17 +13,24 @@ class TaskRepository(
     val tasks: Flow<List<TaskEntity>> = taskDao.observeTasks()
     val meetings: Flow<List<MeetingEntity>> = meetingDao.observeMeetings()
 
-    suspend fun addTask(
-        title: String,
-        dueAtMillis: Long?,
-        reminderAtMillis: Long?,
-        priority: String,
-        assignee: String,
-        meetingId: Long? = null,
-    ) {
+    suspend fun addTask(title: String, dueAtMillis: Long?, reminderAtMillis: Long?, priority: String, assignee: String, meetingId: Long? = null) {
         val cleanTitle = title.trim()
         val id = taskDao.insert(TaskEntity(title = cleanTitle, dueAtMillis = dueAtMillis, reminderAtMillis = reminderAtMillis, priority = priority, assignee = assignee.trim(), meetingId = meetingId))
         reminderAtMillis?.let { reminderScheduler.schedule(id, cleanTitle, it) }
+    }
+
+    suspend fun updateTask(taskId: Long, title: String, dueAtMillis: Long?, reminderAtMillis: Long?, priority: String, assignee: String) {
+        val cleanTitle = title.trim()
+        taskDao.updateDetails(taskId, cleanTitle, dueAtMillis, reminderAtMillis, priority, assignee.trim())
+        reminderScheduler.cancel(taskId)
+        reminderAtMillis?.let { reminderScheduler.schedule(taskId, cleanTitle, it) }
+    }
+
+    suspend fun updateMeeting(meetingId: Long, title: String, meetingAtMillis: Long, reminderAtMillis: Long?, participants: String, notes: String) {
+        val cleanTitle = title.trim()
+        meetingDao.updateDetails(meetingId, cleanTitle, meetingAtMillis, reminderAtMillis, participants.trim(), notes.trim())
+        reminderScheduler.cancelMeeting(meetingId)
+        reminderAtMillis?.let { reminderScheduler.scheduleMeeting(meetingId, cleanTitle, it) }
     }
 
     suspend fun setCompleted(task: TaskEntity, completed: Boolean) {
@@ -38,23 +44,12 @@ class TaskRepository(
         reminderScheduler.cancel(taskId)
     }
 
-    suspend fun addMeeting(
-        title: String,
-        meetingAtMillis: Long,
-        meetingReminderAtMillis: Long?,
-        participants: String,
-        notes: String,
-        actionTitle: String,
-        actionAssignee: String,
-        actionDueAtMillis: Long?,
-        actionReminderAtMillis: Long?,
-        actionPriority: String,
-    ) {
-        val meetingId = meetingDao.insert(MeetingEntity(title = title.trim(), meetingAtMillis = meetingAtMillis, participants = participants.trim(), notes = notes.trim(), reminderAtMillis = meetingReminderAtMillis))
-        meetingReminderAtMillis?.let { reminderScheduler.scheduleMeeting(meetingId, title.trim(), it) }
-        if (actionTitle.isNotBlank()) {
-            addTask(actionTitle, actionDueAtMillis, actionReminderAtMillis, actionPriority, actionAssignee, meetingId)
-        }
+    suspend fun addMeeting(title: String, meetingAtMillis: Long, meetingReminderAtMillis: Long?, participants: String, notes: String,
+                           actionTitle: String, actionAssignee: String, actionDueAtMillis: Long?, actionReminderAtMillis: Long?, actionPriority: String) {
+        val cleanTitle = title.trim()
+        val meetingId = meetingDao.insert(MeetingEntity(title = cleanTitle, meetingAtMillis = meetingAtMillis, participants = participants.trim(), notes = notes.trim(), reminderAtMillis = meetingReminderAtMillis))
+        meetingReminderAtMillis?.let { reminderScheduler.scheduleMeeting(meetingId, cleanTitle, it) }
+        if (actionTitle.isNotBlank()) addTask(actionTitle, actionDueAtMillis, actionReminderAtMillis, actionPriority, actionAssignee, meetingId)
     }
 
     suspend fun deleteMeeting(meetingId: Long) {
