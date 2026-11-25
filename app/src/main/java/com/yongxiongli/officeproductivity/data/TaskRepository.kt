@@ -14,22 +14,32 @@ class TaskRepository(
     val tasks: Flow<List<TaskEntity>> = taskDao.observeTasks()
     val meetings: Flow<List<MeetingEntity>> = meetingDao.observeMeetings()
 
-    suspend fun addTask(title: String, dueAtMillis: Long?, priority: String, assignee: String, meetingId: Long? = null) {
+    suspend fun addTask(
+        title: String,
+        dueAtMillis: Long?,
+        reminderAtMillis: Long?,
+        priority: String,
+        assignee: String,
+        meetingId: Long? = null,
+    ) {
         val cleanTitle = title.trim()
-        val id = taskDao.insert(TaskEntity(
-            title = cleanTitle,
-            dueAtMillis = dueAtMillis,
-            priority = priority,
-            assignee = assignee.trim(),
-            meetingId = meetingId,
-        ))
-        dueAtMillis?.let { reminderScheduler.schedule(id, cleanTitle, it) }
+        val id = taskDao.insert(
+            TaskEntity(
+                title = cleanTitle,
+                dueAtMillis = dueAtMillis,
+                reminderAtMillis = reminderAtMillis,
+                priority = priority,
+                assignee = assignee.trim(),
+                meetingId = meetingId,
+            ),
+        )
+        reminderAtMillis?.let { reminderScheduler.schedule(id, cleanTitle, it) }
     }
 
     suspend fun setCompleted(task: TaskEntity, completed: Boolean) {
         taskDao.setCompleted(task.id, completed, if (completed) System.currentTimeMillis() else null)
         if (completed) reminderScheduler.cancel(task.id)
-        else task.dueAtMillis?.let { reminderScheduler.schedule(task.id, task.title, it) }
+        else task.reminderAtMillis?.let { reminderScheduler.schedule(task.id, task.title, it) }
     }
 
     suspend fun deleteTask(taskId: Long) {
@@ -40,23 +50,33 @@ class TaskRepository(
     suspend fun addMeeting(
         title: String,
         meetingAtMillis: Long,
+        meetingReminderAtMillis: Long?,
         participants: String,
         notes: String,
         actionTitle: String,
         actionAssignee: String,
         actionDueAtMillis: Long?,
+        actionReminderAtMillis: Long?,
         actionPriority: String,
     ) {
-        val meetingId = meetingDao.insert(MeetingEntity(
-            title = title.trim(),
-            meetingAtMillis = meetingAtMillis,
-            participants = participants.trim(),
-            notes = notes.trim(),
-        ))
+        val cleanTitle = title.trim()
+        val meetingId = meetingDao.insert(
+            MeetingEntity(
+                title = cleanTitle,
+                meetingAtMillis = meetingAtMillis,
+                participants = participants.trim(),
+                notes = notes.trim(),
+                reminderAtMillis = meetingReminderAtMillis,
+            ),
+        )
+        meetingReminderAtMillis?.let { reminderScheduler.scheduleMeeting(meetingId, cleanTitle, it) }
         if (actionTitle.isNotBlank()) {
-            addTask(actionTitle, actionDueAtMillis, actionPriority, actionAssignee, meetingId)
+            addTask(actionTitle, actionDueAtMillis, actionReminderAtMillis, actionPriority, actionAssignee, meetingId)
         }
     }
 
-    suspend fun deleteMeeting(meetingId: Long) = meetingDao.delete(meetingId)
+    suspend fun deleteMeeting(meetingId: Long) {
+        meetingDao.delete(meetingId)
+        reminderScheduler.cancelMeeting(meetingId)
+    }
 }

@@ -21,37 +21,34 @@ class TaskReminderWorker(
     workerParams: WorkerParameters,
 ) : Worker(context, workerParams) {
     override fun doWork(): Result {
-        val taskId = inputData.getLong(KEY_TASK_ID, -1L)
-        val title = inputData.getString(KEY_TASK_TITLE).orEmpty()
-        if (taskId < 0L || title.isBlank()) return Result.failure()
+        // Fall back to the old keys so reminders already queued by an earlier app version still work.
+        val reminderId = inputData.getLong(KEY_REMINDER_ID, inputData.getLong(KEY_TASK_ID, -1L))
+        val title = inputData.getString(KEY_REMINDER_TITLE) ?: inputData.getString(KEY_TASK_TITLE).orEmpty()
+        val kind = inputData.getString(KEY_REMINDER_KIND) ?: KIND_TASK
+        if (reminderId < 0L || title.isBlank()) return Result.failure()
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-            ContextCompat.checkSelfPermission(
-                applicationContext,
-                Manifest.permission.POST_NOTIFICATIONS,
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            return Result.success()
-        }
+            ContextCompat.checkSelfPermission(applicationContext, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) return Result.success()
 
         createNotificationChannel()
-        val notificationId = taskId.hashCode()
+        val notificationId = if (kind == KIND_MEETING) "meeting-$reminderId".hashCode() else reminderId.hashCode()
         val openAppIntent = PendingIntent.getActivity(
             applicationContext,
             notificationId,
             Intent(applicationContext, MainActivity::class.java),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
+        val notificationTitle = if (kind == KIND_MEETING) "会议提醒" else applicationContext.getString(R.string.task_reminder_title)
         val notification = NotificationCompat.Builder(applicationContext, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle(applicationContext.getString(R.string.task_reminder_title))
+            .setContentTitle(notificationTitle)
             .setContentText(title)
             .setStyle(NotificationCompat.BigTextStyle().bigText(title))
             .setContentIntent(openAppIntent)
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .build()
-
         NotificationManagerCompat.from(applicationContext).notify(notificationId, notification)
         return Result.success()
     }
@@ -63,14 +60,18 @@ class TaskReminderWorker(
                 applicationContext.getString(R.string.task_reminder_channel),
                 NotificationManager.IMPORTANCE_DEFAULT,
             )
-            val manager = applicationContext.getSystemService(NotificationManager::class.java)
-            manager.createNotificationChannel(channel)
+            applicationContext.getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
         }
     }
 
     companion object {
         const val KEY_TASK_ID = "task_id"
         const val KEY_TASK_TITLE = "task_title"
+        const val KEY_REMINDER_ID = "reminder_id"
+        const val KEY_REMINDER_TITLE = "reminder_title"
+        const val KEY_REMINDER_KIND = "reminder_kind"
+        const val KIND_TASK = "task"
+        const val KIND_MEETING = "meeting"
         private const val CHANNEL_ID = "task_reminders"
     }
 }

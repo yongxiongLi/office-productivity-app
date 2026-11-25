@@ -26,6 +26,7 @@ abstract class TaskDatabase : RoomDatabase() {
         private val MIGRATION_2_3 = object : Migration(2, 3) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE tasks ADD COLUMN reminderAtMillis INTEGER")
+                db.execSQL("UPDATE tasks SET reminderAtMillis = dueAtMillis WHERE dueAtMillis IS NOT NULL")
                 db.execSQL("ALTER TABLE meetings ADD COLUMN reminderAtMillis INTEGER")
             }
         }
