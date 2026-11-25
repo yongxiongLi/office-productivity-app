@@ -9,7 +9,7 @@ class TaskRepository(
     private val meetingDao: MeetingDao,
     context: Context,
 ) {
-    private val reminderScheduler = TaskReminderScheduler(WorkManager.getInstance(context))
+    private val reminderScheduler = TaskReminderScheduler(context)
 
     val tasks: Flow<List<TaskEntity>> = taskDao.observeTasks()
     val meetings: Flow<List<MeetingEntity>> = meetingDao.observeMeetings()
@@ -23,16 +23,7 @@ class TaskRepository(
         meetingId: Long? = null,
     ) {
         val cleanTitle = title.trim()
-        val id = taskDao.insert(
-            TaskEntity(
-                title = cleanTitle,
-                dueAtMillis = dueAtMillis,
-                reminderAtMillis = reminderAtMillis,
-                priority = priority,
-                assignee = assignee.trim(),
-                meetingId = meetingId,
-            ),
-        )
+        val id = taskDao.insert(TaskEntity(title = cleanTitle, dueAtMillis = dueAtMillis, reminderAtMillis = reminderAtMillis, priority = priority, assignee = assignee.trim(), meetingId = meetingId))
         reminderAtMillis?.let { reminderScheduler.schedule(id, cleanTitle, it) }
     }
 
@@ -59,17 +50,8 @@ class TaskRepository(
         actionReminderAtMillis: Long?,
         actionPriority: String,
     ) {
-        val cleanTitle = title.trim()
-        val meetingId = meetingDao.insert(
-            MeetingEntity(
-                title = cleanTitle,
-                meetingAtMillis = meetingAtMillis,
-                participants = participants.trim(),
-                notes = notes.trim(),
-                reminderAtMillis = meetingReminderAtMillis,
-            ),
-        )
-        meetingReminderAtMillis?.let { reminderScheduler.scheduleMeeting(meetingId, cleanTitle, it) }
+        val meetingId = meetingDao.insert(MeetingEntity(title = title.trim(), meetingAtMillis = meetingAtMillis, participants = participants.trim(), notes = notes.trim(), reminderAtMillis = meetingReminderAtMillis))
+        meetingReminderAtMillis?.let { reminderScheduler.scheduleMeeting(meetingId, title.trim(), it) }
         if (actionTitle.isNotBlank()) {
             addTask(actionTitle, actionDueAtMillis, actionReminderAtMillis, actionPriority, actionAssignee, meetingId)
         }
@@ -79,4 +61,7 @@ class TaskRepository(
         meetingDao.delete(meetingId)
         reminderScheduler.cancelMeeting(meetingId)
     }
+
+    fun canScheduleExactAlarms(): Boolean = reminderScheduler.canScheduleExactAlarms()
+    fun openExactAlarmPermissionSettings() = reminderScheduler.openExactAlarmPermissionSettings()
 }
