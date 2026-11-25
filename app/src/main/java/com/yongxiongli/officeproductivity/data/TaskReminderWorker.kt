@@ -11,6 +11,7 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import androidx.core.content.ContextCompat.startForegroundService
 import androidx.work.Worker
 import androidx.work.WorkerParameters
 import com.yongxiongli.officeproductivity.MainActivity
@@ -31,6 +32,22 @@ class TaskReminderWorker(
             ContextCompat.checkSelfPermission(applicationContext, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) return Result.success()
 
+        val alertIntent = Intent(applicationContext, ReminderAlertService::class.java)
+            .setAction(ReminderAlertService.ACTION_START)
+            .putExtra(ReminderAlertService.EXTRA_TITLE, title)
+            .putExtra(ReminderAlertService.EXTRA_KIND, kind)
+        return try {
+            startForegroundService(applicationContext, alertIntent)
+            Result.success()
+        } catch (_: RuntimeException) {
+            // Some OEM/Android background restrictions can reject a service start. Keep a normal
+            // one-shot notification as a fallback so the reminder is not lost completely.
+            showOneShotNotification(reminderId, title, kind)
+            Result.success()
+        }
+    }
+
+    private fun showOneShotNotification(reminderId: Long, title: String, kind: String) {
         createNotificationChannel()
         val notificationId = if (kind == KIND_MEETING) "meeting-$reminderId".hashCode() else reminderId.hashCode()
         val openAppIntent = PendingIntent.getActivity(
@@ -50,7 +67,6 @@ class TaskReminderWorker(
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .build()
         NotificationManagerCompat.from(applicationContext).notify(notificationId, notification)
-        return Result.success()
     }
 
     private fun createNotificationChannel() {
