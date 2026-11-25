@@ -214,7 +214,6 @@ private fun MeetingsScreen(meetings: List<MeetingEntity>, onEdit: (MeetingEntity
                         TextButton(onClick = { onEdit(meeting) }) { Text("编辑") }
                         TextButton(onClick = { onDelete(meeting.id) }) { Text("删除") }
                     }
-                    Text("记录时间：${formatDateTime(meeting.createdAtMillis)}", style = MaterialTheme.typography.bodySmall)
                     Text("会议时间：${formatDateTime(meeting.meetingAtMillis)}", style = MaterialTheme.typography.bodySmall)
                     meeting.reminderAtMillis?.let { Text("提醒时间：${formatDateTime(it)}", style = MaterialTheme.typography.bodySmall) }
                     if (meeting.participants.isNotBlank()) Text("参与人：${meeting.participants}")
