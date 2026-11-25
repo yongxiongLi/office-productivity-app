@@ -51,12 +51,14 @@ fun DashboardScreen(viewModel: TaskViewModel, onReminderPermissionNeeded: () -> 
     var weeklyReport by remember { mutableStateOf(false) }
     var showTaskDialog by remember { mutableStateOf(false) }
     var showMeetingDialog by remember { mutableStateOf(false) }
+    var editingTask by remember { mutableStateOf<TaskEntity?>(null) }
+    var editingMeeting by remember { mutableStateOf<MeetingEntity?>(null) }
 
     Scaffold(
         floatingActionButton = {
             when (page) {
-                AppPage.TASKS -> Button(onClick = { showTaskDialog = true }) { Text("新建任务 +") }
-                AppPage.MEETINGS -> Button(onClick = { showMeetingDialog = true }) { Text("记录会议 +") }
+                AppPage.TASKS -> Button(onClick = { editingTask = null; showTaskDialog = true }) { Text("新建任务 +") }
+                AppPage.MEETINGS -> Button(onClick = { editingMeeting = null; showMeetingDialog = true }) { Text("记录会议 +") }
                 else -> Unit
             }
         },
@@ -76,29 +78,46 @@ fun DashboardScreen(viewModel: TaskViewModel, onReminderPermissionNeeded: () -> 
                     tasks = tasks,
                     filter = filter,
                     onFilter = { filter = it },
+                    onEdit = { editingTask = it; showTaskDialog = true },
                     onComplete = { task, completed -> viewModel.setCompleted(task, completed) },
                     onDelete = { viewModel.deleteTask(it) },
                 )
-                AppPage.MEETINGS -> MeetingsScreen(meetings) { viewModel.deleteMeeting(it) }
+                AppPage.MEETINGS -> MeetingsScreen(
+                    meetings = meetings,
+                    onEdit = { editingMeeting = it; showMeetingDialog = true },
+                    onDelete = { viewModel.deleteMeeting(it) },
+                )
                 AppPage.REPORTS -> ReportsScreen(tasks, weeklyReport) { weeklyReport = it }
             }
         }
     }
 
     if (showTaskDialog) TaskDialog(
-        onDismiss = { showTaskDialog = false },
+        task = editingTask,
+        onDismiss = { showTaskDialog = false; editingTask = null },
         onSave = { title, due, reminder, priority, assignee ->
-            viewModel.addTask(title, due, reminder, priority, assignee)
+            val existing = editingTask
+            if (existing == null) viewModel.addTask(title, due, reminder, priority, assignee)
+            else viewModel.updateTask(existing.id, title, due, reminder, priority, assignee)
             showTaskDialog = false
+            editingTask = null
             if (reminder != null) onReminderPermissionNeeded()
         },
     )
+
     if (showMeetingDialog) MeetingDialog(
-        onDismiss = { showMeetingDialog = false },
-        onSave = { title, time, meetingReminder, participants, notes, actionTitle, owner, due, actionReminder, priority ->
-            viewModel.addMeeting(title, time, meetingReminder, participants, notes, actionTitle, owner, due, actionReminder, priority)
+        meeting = editingMeeting,
+        onDismiss = { showMeetingDialog = false; editingMeeting = null },
+        onSave = { title, meetingTime, meetingReminder, participants, notes, actionTitle, owner, actionDue, actionReminder, priority ->
+            val existing = editingMeeting
+            if (existing == null) {
+                viewModel.addMeeting(title, meetingTime, meetingReminder, participants, notes, actionTitle, owner, actionDue, actionReminder, priority)
+            } else {
+                viewModel.updateMeeting(existing.id, title, meetingTime, meetingReminder, participants, notes)
+            }
             showMeetingDialog = false
-            if (meetingReminder != null || (actionTitle.isNotBlank() && actionReminder != null)) onReminderPermissionNeeded()
+            editingMeeting = null
+            if (meetingReminder != null || actionReminder != null) onReminderPermissionNeeded()
         },
     )
 }
@@ -132,6 +151,7 @@ private fun TaskScreen(
     tasks: List<TaskEntity>,
     filter: TaskFilter,
     onFilter: (TaskFilter) -> Unit,
+    onEdit: (TaskEntity) -> Unit,
     onComplete: (TaskEntity, Boolean) -> Unit,
     onDelete: (Long) -> Unit,
 ) {
@@ -154,12 +174,14 @@ private fun TaskScreen(
     }
     if (visible.isEmpty()) Text("暂无${filter.label}任务")
     else LazyColumn(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        items(visible, key = { it.id }) { task -> TaskCard(task, { onComplete(task, it) }, { onDelete(task.id) }) }
+        items(visible, key = { it.id }) { task ->
+            TaskCard(task, { onComplete(task, it) }, { onEdit(task) }, { onDelete(task.id) })
+        }
     }
 }
 
 @Composable
-private fun TaskCard(task: TaskEntity, onComplete: (Boolean) -> Unit, onDelete: () -> Unit) {
+private fun TaskCard(task: TaskEntity, onComplete: (Boolean) -> Unit, onEdit: () -> Unit, onDelete: () -> Unit) {
     Card(Modifier.fillMaxWidth()) {
         Row(Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
             Checkbox(checked = task.isCompleted, onCheckedChange = onComplete)
@@ -169,13 +191,16 @@ private fun TaskCard(task: TaskEntity, onComplete: (Boolean) -> Unit, onDelete: 
                 task.dueAtMillis?.let { Text("截止：${formatDateTime(it)}", style = MaterialTheme.typography.bodySmall) }
                 task.reminderAtMillis?.let { Text("提醒：${formatDateTime(it)}", style = MaterialTheme.typography.bodySmall) }
             }
-            TextButton(onClick = onDelete) { Text("删除") }
+            Column {
+                TextButton(onClick = onEdit) { Text("编辑") }
+                TextButton(onClick = onDelete) { Text("删除") }
+            }
         }
     }
 }
 
 @Composable
-private fun MeetingsScreen(meetings: List<MeetingEntity>, onDelete: (Long) -> Unit) {
+private fun MeetingsScreen(meetings: List<MeetingEntity>, onEdit: (MeetingEntity) -> Unit, onDelete: (Long) -> Unit) {
     Text("会议记录", style = MaterialTheme.typography.headlineMedium)
     Text("记录讨论内容，并把行动项关联到任务。")
     if (meetings.isEmpty()) Text("还没有会议记录。点击“记录会议 +”开始添加。")
@@ -185,6 +210,7 @@ private fun MeetingsScreen(meetings: List<MeetingEntity>, onDelete: (Long) -> Un
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(meeting.title, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
+                        TextButton(onClick = { onEdit(meeting) }) { Text("编辑") }
                         TextButton(onClick = { onDelete(meeting.id) }) { Text("删除") }
                     }
                     Text("会议时间：${formatDateTime(meeting.meetingAtMillis)}", style = MaterialTheme.typography.bodySmall)
@@ -207,30 +233,32 @@ private fun ReportsScreen(tasks: List<TaskEntity>, weekly: Boolean, onWeeklyChan
     val completed = tasks.filter { it.isCompleted && (it.completedAtMillis ?: 0L) >= start }
     Text("日报 / 周报", style = MaterialTheme.typography.headlineMedium)
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        if (!weekly) Button(onClick = { onWeeklyChange(false) }) { Text("日报") }
-        else OutlinedButton(onClick = { onWeeklyChange(false) }) { Text("日报") }
-        if (weekly) Button(onClick = { onWeeklyChange(true) }) { Text("周报") }
-        else OutlinedButton(onClick = { onWeeklyChange(true) }) { Text("周报") }
+        if (!weekly) Button(onClick = { onWeeklyChange(false) }) { Text("日报") } else OutlinedButton(onClick = { onWeeklyChange(false) }) { Text("日报") }
+        if (weekly) Button(onClick = { onWeeklyChange(true) }) { Text("周报") } else OutlinedButton(onClick = { onWeeklyChange(true) }) { Text("周报") }
     }
     Text(if (weekly) "本周完成 ${completed.size} 项" else "今日完成 ${completed.size} 项", style = MaterialTheme.typography.titleLarge)
     if (completed.isEmpty()) Text("该时间段还没有已完成任务。")
     else LazyColumn(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        items(completed, key = { it.id }) { TaskCard(it, {}, {}) }
+        items(completed, key = { it.id }) { TaskCard(it, {}, {}, {}) }
     }
     Text("未完成待办：${tasks.count { !it.isCompleted }}")
 }
 
 @Composable
-private fun TaskDialog(onDismiss: () -> Unit, onSave: (String, Long?, Long?, String, String) -> Unit) {
+private fun TaskDialog(
+    task: TaskEntity? = null,
+    onDismiss: () -> Unit,
+    onSave: (String, Long?, Long?, String, String) -> Unit,
+) {
     val context = LocalContext.current
-    var title by remember { mutableStateOf("") }
-    var assignee by remember { mutableStateOf("") }
-    var priority by remember { mutableStateOf("MEDIUM") }
-    var due by remember { mutableLongStateOf(0L) }
-    var reminder by remember { mutableLongStateOf(0L) }
+    var title by remember(task) { mutableStateOf(task?.title.orEmpty()) }
+    var assignee by remember(task) { mutableStateOf(task?.assignee.orEmpty()) }
+    var priority by remember(task) { mutableStateOf(task?.priority ?: "MEDIUM") }
+    var due by remember(task) { mutableLongStateOf(task?.dueAtMillis ?: 0L) }
+    var reminder by remember(task) { mutableLongStateOf(task?.reminderAtMillis ?: 0L) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("新建任务") },
+        title = { Text(if (task == null) "新建任务" else "编辑任务") },
         text = {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 item { OutlinedTextField(title, { title = it }, label = { Text("任务标题") }, singleLine = true) }
@@ -258,23 +286,24 @@ private fun TaskDialog(onDismiss: () -> Unit, onSave: (String, Long?, Long?, Str
 
 @Composable
 private fun MeetingDialog(
+    meeting: MeetingEntity? = null,
     onDismiss: () -> Unit,
     onSave: (String, Long, Long?, String, String, String, String, Long?, Long?, String) -> Unit,
 ) {
     val context = LocalContext.current
-    var title by remember { mutableStateOf("") }
-    var participants by remember { mutableStateOf("") }
-    var notes by remember { mutableStateOf("") }
-    var action by remember { mutableStateOf("") }
-    var owner by remember { mutableStateOf("") }
-    var priority by remember { mutableStateOf("MEDIUM") }
-    var meetingTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    var meetingReminder by remember { mutableLongStateOf(0L) }
-    var actionDue by remember { mutableLongStateOf(0L) }
-    var actionReminder by remember { mutableLongStateOf(0L) }
+    var title by remember(meeting) { mutableStateOf(meeting?.title.orEmpty()) }
+    var participants by remember(meeting) { mutableStateOf(meeting?.participants.orEmpty()) }
+    var notes by remember(meeting) { mutableStateOf(meeting?.notes.orEmpty()) }
+    var action by remember(meeting) { mutableStateOf("") }
+    var owner by remember(meeting) { mutableStateOf("") }
+    var priority by remember(meeting) { mutableStateOf("MEDIUM") }
+    var meetingTime by remember(meeting) { mutableLongStateOf(meeting?.meetingAtMillis ?: System.currentTimeMillis()) }
+    var meetingReminder by remember(meeting) { mutableLongStateOf(meeting?.reminderAtMillis ?: 0L) }
+    var actionDue by remember(meeting) { mutableLongStateOf(0L) }
+    var actionReminder by remember(meeting) { mutableLongStateOf(0L) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("记录会议") },
+        title = { Text(if (meeting == null) "记录会议" else "编辑会议") },
         text = {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 item { OutlinedTextField(title, { title = it }, label = { Text("会议标题") }, singleLine = true) }
@@ -283,33 +312,30 @@ private fun MeetingDialog(
                 item { if (meetingReminder > 0L) TextButton(onClick = { meetingReminder = 0L }) { Text("清除会议提醒") } }
                 item { OutlinedTextField(participants, { participants = it }, label = { Text("参与人") }, singleLine = true) }
                 item { OutlinedTextField(notes, { notes = it }, label = { Text("会议内容") }, minLines = 3) }
-                item { Text("行动项（可选，保存后会关联创建任务）", style = MaterialTheme.typography.titleSmall) }
-                item { OutlinedTextField(action, { action = it }, label = { Text("待办内容") }, singleLine = true) }
-                item { OutlinedTextField(owner, { owner = it }, label = { Text("负责人") }, singleLine = true) }
-                item { DateTimeButton(context, actionDue.takeIf { it > 0L }, "设置行动项截止时间") { actionDue = it } }
-                item { if (actionDue > 0L) TextButton(onClick = { actionDue = 0L }) { Text("清除行动项截止时间") } }
-                item { DateTimeButton(context, actionReminder.takeIf { it > 0L }, "设置行动项提醒时间（可选）") { actionReminder = it } }
-                item { if (actionReminder > 0L) TextButton(onClick = { actionReminder = 0L }) { Text("清除行动项提醒") } }
-                item { Text("行动项优先级") }
-                item {
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        priorities.forEach { label ->
-                            val code = priorityCode(label)
-                            if (priority == code) Button(onClick = { priority = code }) { Text(label) }
-                            else OutlinedButton(onClick = { priority = code }) { Text(label) }
+                if (meeting == null) {
+                    item { Text("行动项（可选，保存后会关联创建任务）", style = MaterialTheme.typography.titleSmall) }
+                    item { OutlinedTextField(action, { action = it }, label = { Text("待办内容") }, singleLine = true) }
+                    item { OutlinedTextField(owner, { owner = it }, label = { Text("负责人") }, singleLine = true) }
+                    item { DateTimeButton(context, actionDue.takeIf { it > 0L }, "设置行动项截止时间") { actionDue = it } }
+                    item { if (actionDue > 0L) TextButton(onClick = { actionDue = 0L }) { Text("清除行动项截止时间") } }
+                    item { DateTimeButton(context, actionReminder.takeIf { it > 0L }, "设置行动项提醒时间（可选）") { actionReminder = it } }
+                    item { if (actionReminder > 0L) TextButton(onClick = { actionReminder = 0L }) { Text("清除行动项提醒") } }
+                    item { Text("行动项优先级") }
+                    item {
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            priorities.forEach { label ->
+                                val code = priorityCode(label)
+                                if (priority == code) Button(onClick = { priority = code }) { Text(label) }
+                                else OutlinedButton(onClick = { priority = code }) { Text(label) }
+                            }
                         }
                     }
                 }
             }
         },
-        confirmButton = {
-            TextButton(enabled = title.isNotBlank(), onClick = {
-                onSave(
-                    title.trim(), meetingTime, meetingReminder.takeIf { it > 0L }, participants, notes,
-                    action, owner, actionDue.takeIf { it > 0L }, actionReminder.takeIf { it > 0L }, priority,
-                )
-            }) { Text("保存") }
-        },
+        confirmButton = { TextButton(enabled = title.isNotBlank(), onClick = {
+            onSave(title.trim(), meetingTime, meetingReminder.takeIf { it > 0L }, participants, notes, action, owner, actionDue.takeIf { it > 0L }, actionReminder.takeIf { it > 0L }, priority)
+        }) { Text("保存") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } },
     )
 }
