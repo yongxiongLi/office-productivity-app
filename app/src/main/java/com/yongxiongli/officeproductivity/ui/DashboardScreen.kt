@@ -188,8 +188,9 @@ private fun TaskCard(task: TaskEntity, onComplete: (Boolean) -> Unit, onEdit: ()
             Column(Modifier.weight(1f).padding(vertical = 6.dp)) {
                 Text(task.title, style = MaterialTheme.typography.titleMedium)
                 Text("${priorityLabel(task.priority)}优先级${task.assignee.takeIf { it.isNotBlank() }?.let { " · 负责人：$it" } ?: ""}", style = MaterialTheme.typography.bodySmall)
-                task.dueAtMillis?.let { Text("截止：${formatDateTime(it)}", style = MaterialTheme.typography.bodySmall) }
-                task.reminderAtMillis?.let { Text("提醒：${formatDateTime(it)}", style = MaterialTheme.typography.bodySmall) }
+                Text("记录时间：${formatDateTime(task.createdAtMillis)}", style = MaterialTheme.typography.bodySmall)
+                task.dueAtMillis?.let { Text("截止时间：${formatDateTime(it)}", style = MaterialTheme.typography.bodySmall) }
+                task.reminderAtMillis?.let { Text("提醒时间：${formatDateTime(it)}", style = MaterialTheme.typography.bodySmall) }
             }
             Column {
                 TextButton(onClick = onEdit) { Text("编辑") }
@@ -213,6 +214,7 @@ private fun MeetingsScreen(meetings: List<MeetingEntity>, onEdit: (MeetingEntity
                         TextButton(onClick = { onEdit(meeting) }) { Text("编辑") }
                         TextButton(onClick = { onDelete(meeting.id) }) { Text("删除") }
                     }
+                    Text("记录时间：${formatDateTime(meeting.createdAtMillis)}", style = MaterialTheme.typography.bodySmall)
                     Text("会议时间：${formatDateTime(meeting.meetingAtMillis)}", style = MaterialTheme.typography.bodySmall)
                     meeting.reminderAtMillis?.let { Text("提醒时间：${formatDateTime(it)}", style = MaterialTheme.typography.bodySmall) }
                     if (meeting.participants.isNotBlank()) Text("参与人：${meeting.participants}")
@@ -245,11 +247,7 @@ private fun ReportsScreen(tasks: List<TaskEntity>, weekly: Boolean, onWeeklyChan
 }
 
 @Composable
-private fun TaskDialog(
-    task: TaskEntity? = null,
-    onDismiss: () -> Unit,
-    onSave: (String, Long?, Long?, String, String) -> Unit,
-) {
+private fun TaskDialog(task: TaskEntity? = null, onDismiss: () -> Unit, onSave: (String, Long?, Long?, String, String) -> Unit) {
     val context = LocalContext.current
     var title by remember(task) { mutableStateOf(task?.title.orEmpty()) }
     var assignee by remember(task) { mutableStateOf(task?.assignee.orEmpty()) }
