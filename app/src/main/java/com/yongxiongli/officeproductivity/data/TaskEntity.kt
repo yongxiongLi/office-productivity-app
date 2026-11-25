@@ -10,4 +10,8 @@ data class TaskEntity(
     val dueAtMillis: Long? = null,
     val isCompleted: Boolean = false,
     val createdAtMillis: Long = System.currentTimeMillis(),
+    val priority: String = "MEDIUM",
+    val assignee: String = "",
+    val meetingId: Long? = null,
+    val completedAtMillis: Long? = null,
 )

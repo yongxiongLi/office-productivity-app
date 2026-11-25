@@ -3,6 +3,7 @@ package com.yongxiongli.officeproductivity.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.yongxiongli.officeproductivity.data.MeetingEntity
 import com.yongxiongli.officeproductivity.data.TaskEntity
 import com.yongxiongli.officeproductivity.data.TaskRepository
 import kotlinx.coroutines.flow.Flow
@@ -10,18 +11,26 @@ import kotlinx.coroutines.launch
 
 class TaskViewModel(private val repository: TaskRepository) : ViewModel() {
     val tasks: Flow<List<TaskEntity>> = repository.tasks
+    val meetings: Flow<List<MeetingEntity>> = repository.meetings
 
-    fun addTask(title: String, dueAtMillis: Long?) {
-        viewModelScope.launch { repository.addTask(title, dueAtMillis) }
+    fun addTask(title: String, dueAtMillis: Long?, priority: String, assignee: String) {
+        viewModelScope.launch { repository.addTask(title, dueAtMillis, priority, assignee) }
+    }
+
+    fun addMeeting(title: String, meetingAtMillis: Long, participants: String, notes: String,
+                   actionTitle: String, actionAssignee: String, actionDueAtMillis: Long?, actionPriority: String) {
+        viewModelScope.launch {
+            repository.addMeeting(title, meetingAtMillis, participants, notes,
+                actionTitle, actionAssignee, actionDueAtMillis, actionPriority)
+        }
     }
 
     fun setCompleted(task: TaskEntity, completed: Boolean) {
         viewModelScope.launch { repository.setCompleted(task, completed) }
     }
 
-    fun deleteTask(taskId: Long) {
-        viewModelScope.launch { repository.deleteTask(taskId) }
-    }
+    fun deleteTask(taskId: Long) { viewModelScope.launch { repository.deleteTask(taskId) } }
+    fun deleteMeeting(meetingId: Long) { viewModelScope.launch { repository.deleteMeeting(meetingId) } }
 
     class Factory(private val repository: TaskRepository) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")

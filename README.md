@@ -2,27 +2,21 @@
 
 An Android productivity app for meeting notes, tasks and reminders, and daily/weekly reports.
 
-## Project skeleton
+## 功能
 
-- Kotlin + Jetpack Compose and Material 3
-- Task screen with local Room persistence
-- WorkManager-based task deadline notifications
-- Android app module with Java 17, `minSdk 26`, and `compileSdk 35`
+- 首页工作台：查看待办总数、今日到期任务与会议记录快捷入口。
+- 任务：创建标题、截止时间、优先级和负责人；按今天、即将到期、已完成或全部筛选；完成/删除任务。
+- 提醒：截止时间通过 WorkManager 安排本地通知。Android 13+ 需要通知权限；系统可能延后后台任务，因此不保证精确到分钟。
+- 会议：记录标题、时间、参与人和内容；可填写行动项、负责人、优先级和截止时间，保存后自动关联创建任务。
+- 报告：查看今日或本周完成的任务汇总。
+- Room 本地存储，并提供从旧版数据库的 1→2 迁移。
 
-## Open and run
+## 运行
 
-1. Install Android Studio with Android SDK 35 and a JDK 17 runtime.
-2. Open this repository as a project in Android Studio and let Gradle sync.
-3. Run the `app` configuration on an emulator or Android device.
+1. 使用 Android Studio 打开项目，安装 Android SDK 35 和 JDK 17。
+2. 等待 Gradle Sync 完成后选择 `app` 配置。
+3. 在模拟器或 Android 设备上运行。
 
-If you want a command-line Gradle wrapper, generate it from the project root using Gradle 8.9: `gradle wrapper --gradle-version 8.9`.
+## 后续方向
 
-## Tasks and reminders
-
-Tasks are stored locally in Room. Create a task and optionally choose a date and time to schedule a notification. You can mark a task complete or delete it; either action cancels its pending reminder. Android 13 and later require notification permission. WorkManager schedules reminders as deferrable background work, so delivery is not guaranteed at the exact minute.
-
-## Next steps
-
-1. Add edit-task support and tests for persistence and scheduling.
-2. Add meeting notes and reports, then link meeting action items to tasks.
-3. Consider backup or account sync after the local-first workflow is stable.
+可继续增加任务编辑、会议关联任务列表、报告导出、自动化测试及云端同步。

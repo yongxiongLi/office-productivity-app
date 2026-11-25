@@ -16,37 +16,25 @@ import com.yongxiongli.officeproductivity.ui.TaskViewModel
 import com.yongxiongli.officeproductivity.ui.theme.OfficeProductivityTheme
 
 class MainActivity : ComponentActivity() {
-    private val requestNotificationsPermission = registerForActivityResult(
-        ActivityResultContracts.RequestPermission(),
-    ) { }
+    private val requestNotificationsPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         val database = TaskDatabase.getInstance(applicationContext)
-        val repository = TaskRepository(database.taskDao(), applicationContext)
-        val viewModel = ViewModelProvider(this, TaskViewModel.Factory(repository))[
-            TaskViewModel::class.java
-        ]
-
+        val viewModel = ViewModelProvider(
+            this,
+            TaskViewModel.Factory(TaskRepository(database.taskDao(), database.meetingDao(), applicationContext)),
+        )[TaskViewModel::class.java]
         setContent {
             OfficeProductivityTheme {
-                DashboardScreen(
-                    viewModel = viewModel,
-                    onReminderPermissionNeeded = ::requestNotificationPermissionIfNeeded,
-                )
+                DashboardScreen(viewModel, ::requestNotificationPermissionIfNeeded)
             }
         }
     }
 
     private fun requestNotificationPermissionIfNeeded() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-            ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.POST_NOTIFICATIONS,
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            requestNotificationsPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
-        }
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) requestNotificationsPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
     }
 }
