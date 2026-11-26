@@ -156,10 +156,17 @@ private fun TaskScreen(
     onDelete: (Long) -> Unit,
 ) {
     Text("任务记录", style = MaterialTheme.typography.headlineMedium)
-    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
         TaskFilter.entries.forEach { item ->
-            if (item == filter) Button(onClick = { onFilter(item) }) { Text(item.label) }
-            else OutlinedButton(onClick = { onFilter(item) }) { Text(item.label) }
+            val isSelected = item == filter
+            if (isSelected) {
+                Button(onClick = { onFilter(item) }) { Text(item.label) }
+            } else {
+                OutlinedButton(onClick = { onFilter(item) }) { Text(item.label) }
+            }
         }
     }
     val now = System.currentTimeMillis()
@@ -186,11 +193,7 @@ private fun TaskCard(task: TaskEntity, onComplete: (Boolean) -> Unit, onEdit: ()
         Column(Modifier.fillMaxWidth().padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Checkbox(checked = task.isCompleted, onCheckedChange = onComplete)
-                Text(
-                    task.title,
-                    modifier = Modifier.weight(1f),
-                    style = MaterialTheme.typography.titleMedium,
-                )
+                Text(task.title, modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
             }
             Column(
                 modifier = Modifier.fillMaxWidth().padding(start = 48.dp),
@@ -200,9 +203,7 @@ private fun TaskCard(task: TaskEntity, onComplete: (Boolean) -> Unit, onEdit: ()
                 Text("记录时间：${formatDateTime(task.createdAtMillis)}", style = MaterialTheme.typography.bodySmall)
                 task.dueAtMillis?.let { Text("截止时间：${formatDateTime(it)}", style = MaterialTheme.typography.bodySmall) }
                 task.reminderAtMillis?.let { Text("提醒时间：${formatDateTime(it)}", style = MaterialTheme.typography.bodySmall) }
-                if (task.isCompleted) task.completedAtMillis?.let {
-                    Text("完成时间：${formatDateTime(it)}", style = MaterialTheme.typography.bodySmall)
-                }
+                if (task.isCompleted) task.completedAtMillis?.let { Text("完成时间：${formatDateTime(it)}", style = MaterialTheme.typography.bodySmall) }
             }
             Row(
                 modifier = Modifier.fillMaxWidth(),
