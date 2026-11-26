@@ -183,16 +183,32 @@ private fun TaskScreen(
 @Composable
 private fun TaskCard(task: TaskEntity, onComplete: (Boolean) -> Unit, onEdit: () -> Unit, onDelete: () -> Unit) {
     Card(Modifier.fillMaxWidth()) {
-        Row(Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Checkbox(checked = task.isCompleted, onCheckedChange = onComplete)
-            Column(Modifier.weight(1f).padding(vertical = 6.dp)) {
-                Text(task.title, style = MaterialTheme.typography.titleMedium)
+        Column(Modifier.fillMaxWidth().padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(checked = task.isCompleted, onCheckedChange = onComplete)
+                Text(
+                    task.title,
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.titleMedium,
+                )
+            }
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(start = 48.dp),
+                verticalArrangement = Arrangement.spacedBy(3.dp),
+            ) {
                 Text("${priorityLabel(task.priority)}优先级${task.assignee.takeIf { it.isNotBlank() }?.let { " · 负责人：$it" } ?: ""}", style = MaterialTheme.typography.bodySmall)
                 Text("记录时间：${formatDateTime(task.createdAtMillis)}", style = MaterialTheme.typography.bodySmall)
                 task.dueAtMillis?.let { Text("截止时间：${formatDateTime(it)}", style = MaterialTheme.typography.bodySmall) }
                 task.reminderAtMillis?.let { Text("提醒时间：${formatDateTime(it)}", style = MaterialTheme.typography.bodySmall) }
+                if (task.isCompleted) task.completedAtMillis?.let {
+                    Text("完成时间：${formatDateTime(it)}", style = MaterialTheme.typography.bodySmall)
+                }
             }
-            Column {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 TextButton(onClick = onEdit) { Text("编辑") }
                 TextButton(onClick = onDelete) { Text("删除") }
             }
